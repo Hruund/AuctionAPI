@@ -126,6 +126,7 @@ def get_one_auction(name_item):
     
     item = get_inf_item(name_item)
     itemA = None
+    lower_price = 99999999999
 
     for auction in auctions:
         id_item = auction['item']['id']
@@ -145,20 +146,26 @@ def get_one_auction(name_item):
             image = get_icon_item(str(id_item))
 
             ###for each auction get the auction with the lowest price
+            if price < lower_price:
+                lower_price = price
+                lower_action = itemA
 
-            json_convert = {
-                'auctions' : [
-                    {
-                        'image' : image,
-                        'name' : str(name_item),
-                        'quantity' : str(quantity),
-                        'time_left' : str(time_left),
-                        'price' : str(price)
-                    }
-                ]
-            }
+            if price == lower_price:
+                ###put in json file
+                json_convert = {
+                    'auctions' : [
+                        {
+                            'image' : image,
+                            'name' : str(item["name"]["fr_FR"]),
+                            'quantity' : str(lower_action['quantity']),
+                            'time_left' : str(lower_action['time_left']),
+                            'price' : str(price)
+                        }
+                    ]
+                }
 
-            write_in_jsonfile(json_convert)
+                ###don't delete old json
+                write_in_jsonfile(json_convert)
 
             price = divid_money(price)
             print(image+" Nom: "+str(name_item)+", Quantité: "+str(quantity)+", Temps restant: "+str(time_left)+", Prix: "+str(price))
@@ -204,7 +211,7 @@ def show_auction_in_browser(name_item):
 
 def write_in_jsonfile(data):
     with open('auctions.json', 'w') as outfile:
-        json.dump(data, outfile)
+        json.dump(data, outfile, sort_keys=True, indent=4)
 
 get_one_auction("Machine volante")
 #show_auction_in_browser("Machine volante")
