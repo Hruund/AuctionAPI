@@ -6,11 +6,14 @@ import requests
 import json
 from time import sleep, strftime
 from requests.structures import CaseInsensitiveDict
+from datetime import date
+
 
 region='eu'
 langue='fr'
 locale='fr_EU'
 realm='1127'
+today = date.today()
 
 def get_token():
     headers = CaseInsensitiveDict()
@@ -47,10 +50,10 @@ paramsDynamic = (
 #### END ENVRIONMENT
 
 def divid_money(price):
-    gold = price/10000
-    price = price%10000
-    silver = price/100
-    copper = price%100
+    gold = int(price)/10000
+    price = int(price)%10000
+    silver = int(price)/100
+    copper = int(price)%100
 
     money=str(gold)+"Or "+str(silver)+"Argent "+str(copper)+"Bronze"
 
@@ -76,7 +79,7 @@ def get_all_auctions_form():
     data = json.loads(response.text)
 
     auctions = data["auctions"]
-
+    
     for auction in auctions:
         if "buyout" in auction:
             price = auction['buyout']
@@ -112,8 +115,29 @@ def get_all_auctions_json():
         price = divid_money(price)
 
         auction = [id_item, quantity, time_left, price]
+        print(auction)
+    
+    ##Warning: return all info on item, not only, id, quantity, time_left and price
+    return auctions
 
-        print(json.dumps(auction))
+def get_all_auctions_in_json_file():
+    url_auctions='https://'+region+'.api.blizzard.com/data/wow/connected-realm/'+realm+'/auctions'
+
+    response = requests.get(url_auctions, headers=headersWithToken, params=paramsDynamic)
+    data = json.loads(response.text)
+
+    auctions = data["auctions"]
+    write_in_jsonfile(auctions)
+
+def get_all_auctions():
+    url_auctions='https://'+region+'.api.blizzard.com/data/wow/connected-realm/'+realm+'/auctions'
+
+    response = requests.get(url_auctions, headers=headersWithToken, params=paramsDynamic)
+    data = json.loads(response.text)
+
+    auctions = data["auctions"]
+
+    return auctions
 
 def get_one_auction(name_item):
 
@@ -151,12 +175,12 @@ def get_one_auction(name_item):
                 lower_action = itemA
 
             if price == lower_price:
-                ###put in json file
+                ###json creator
                 json_convert = {
                     'auctions' : [
                         {
                             'image' : image,
-                            'name' : str(item["name"]["fr_FR"]),
+                            'name' : str(name_item),
                             'quantity' : str(lower_action['quantity']),
                             'time_left' : str(lower_action['time_left']),
                             'price' : str(price)
@@ -164,7 +188,7 @@ def get_one_auction(name_item):
                     ]
                 }
 
-                ###don't delete old json
+                ###push in file
                 write_in_jsonfile(json_convert)
 
             price = divid_money(price)
@@ -196,6 +220,23 @@ def get_inf_item(name_item):
 
     return theItem
 
+def get_inf_item_by_id(id_item):
+    url_auctions='https://'+region+'.api.blizzard.com/data/wow/item'
+
+    params = (
+        ('region', region),
+        ('itemId', str(id_item)),
+        ('namespace', 'static-'+region),
+        ('locale', locale)
+    )
+
+    response = requests.get(url_auctions, headers=headersWithToken, params=params)
+    data = json.loads(response.text)
+
+    item = data["results"]
+
+    return item
+
 def show_auction_in_browser(name_item):
     try:
         lines = get_one_auction(name_item)
@@ -210,8 +251,25 @@ def show_auction_in_browser(name_item):
         driver.close()
 
 def write_in_jsonfile(data):
-    with open('auctions.json', 'w') as outfile:
+    today.strftime('%m/%d/%Y')
+    with open('auctions'+str(today)+'.json', 'w') as outfile:
         json.dump(data, outfile, sort_keys=True, indent=4)
 
-get_one_auction("Machine volante")
+def catalogue_item_info_jsonfile():
+    with open('catalogue_item_info.json', 'w') as outfile:
+        auctions = get_all_auctions()
+        for auction_item in auctions['item']:
+            item = get_inf_item_by_id(auction_item['id'])
+            if (auction_item['id'] == item['id']):
+                json.dump(item, outfile, sort_keys=True, indent=4)
+        
+
+#get_one_auction("Hache de bucheron")
 #show_auction_in_browser("Machine volante")
+print(get_inf_item_by_id(10001))
+#get_all_auctions_in_json_file()
+#write_in_jsonfile()
+#get_all_auctions_in_json_file()
+#print(get_inf_item_by_id('10001'))
+#catalogue_item_info_jsonfile()
+###Quand on va chercher les enchaire d'un objet
